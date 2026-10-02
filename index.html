@@ -1,1 +1,756 @@
-.
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mes projets</title>
+<meta name="description" content="Tous mes dépôts GitHub en un coup d'œil.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<script>window.addEventListener("error", (e) => { if (!window.__configError) window.__configError = e; });</script>
+<script>
+/* =====================================================================
+   RÉGLAGES — c'est la seule partie à modifier
+   ===================================================================== */
+const CONFIG = {
+	// Votre identifiant GitHub. Inutile si le site est publié sur <identifiant>.github.io :
+	// il est alors détecté automatiquement.
+	user: "VOTRE-COMPTE",
+
+	// Vide = nom et bio de votre profil GitHub. Écrivez-les avec vos propres mots si vous les remplissez.
+	name: "",
+	intro: "",
+
+	// Liens affichés sous votre nom (laisser url vide pour masquer)
+	links: [
+		{ label: "Profil GitHub", url: "auto" },
+		{ label: "Site web", url: "" }
+	],
+
+	// Projets mis en avant : ils occupent les premières touches du deck.
+	// repo : nom du dépôt (laisser vide pour un projet sans dépôt public, ex. une version payante)
+	// icon : un emoji, ou l'adresse d'une image carrée
+	// color : couleur de la touche
+	// text : description (vide = description du dépôt)
+	featured: [
+		{
+			repo: "vtt-deck",
+			label: "VTT Deck",
+			icon: "🎛️",
+			color: "#6b3fa0",
+			text: "",
+			links: [
+				{ label: "Page Foundry VTT", url: "" },
+				{ label: "Plugin Stream Deck", url: "" }
+			]
+		},
+		{ repo: "escadrille-argos", label: "Escadrille Argos", icon: "✈️", color: "#1f6fa8", text: "", links: [] }
+		// Une version payante avec un lien d'achat peut aussi être mise en avant ici (touche cliquable) :
+		// { repo: "", label: "VTT Deck Pro", icon: "⭐", color: "#8a5a2b", text: "…", links: [{ label: "Acheter", url: "" }] },
+	],
+
+	// Projets privés : affichés sur la page suivante du deck, grisés avec un cadenas, non cliquables.
+	// GitHub ne montre jamais les dépôts privés aux visiteurs : ils se déclarent donc ici, à la main.
+	// N'écrivez que ce que vous acceptez de rendre public (un nom vague suffit).
+	// text : courte description affichée au survol (facultatif)
+	private: [
+		{ label: "VTT Deck Pro", icon: "⭐", text: "Extension payante de VTT Deck." },
+		{ label: "Formation Laser", icon: "🎓", text: "" },
+		{ label: "Téléconsultation", icon: "🩺", text: "" },
+		{ label: "Dashboard Xeneon Edge", icon: "📊", text: "" },
+		{ label: "Simulateur FIRE", icon: "🔥", text: "" }
+	],
+
+	// Organisations (ou ensembles) de projets privés : chacune a sa propre page sur le deck,
+	// comme un dossier du Stream Deck. Mêmes champs que « private » pour chaque projet.
+	// text : phrase affichée sur l'écran du deck quand on arrive sur la page (facultatif)
+	// url : page publique de l'organisation (facultatif ; vide = pas de lien)
+	// Une organisation sans projet listé n'a pas de page.
+	groups: [
+		{
+			name: "Medilase",
+			text: "",
+			url: "",
+			projects: [
+				{ label: "Léa", icon: "💬", text: "Chatbot pour site web d'un centre laser esthétique" },
+				{ label: "Calculateur Laser", icon: "⚡️", text: "Calculateur d'optimisation des paramètres de réglage d'un laser épilatoire médical" },
+				{ label: "Simulateur Laser", icon: "⚡️", text: "Simulateur d'optimisation des paramètres de réglage d'un laser épilatoire non médical" }
+			]
+		}
+	],
+
+	// Dépôts à ne jamais afficher (le dépôt de ce site et celui du README de profil le sont déjà)
+	hidden: [],
+
+	// Afficher aussi les forks dans la liste complète ?
+	showForks: false
+};
+</script>
+<style>
+:root {
+	--page: #e3e8ee;
+	--ink: #1b2330;
+	--ink-soft: #4a5566;
+	--rule: #c5cdd7;
+	--link: #23559f;
+	--device: #24282f;
+	--device-edge: #3a3f48;
+	--gap: #121418;
+	--focus: #ff9d2e;
+	--display: "Chakra Petch", "Avenir Next Condensed", "Arial Narrow", sans-serif;
+	--body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+	color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--page: #171a1f;
+		--ink: #e3e7ec;
+		--ink-soft: #a3adba;
+		--rule: #2c323b;
+		--link: #8db7ff;
+		--device: #2a2f37;
+		--device-edge: #444b56;
+	}
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+	margin: 0;
+	background: var(--page);
+	color: var(--ink);
+	font: 17px/1.55 var(--body);
+	-webkit-font-smoothing: antialiased;
+}
+a { color: var(--link); text-underline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+.wrap { width: min(1120px, 100% - 40px); margin-inline: auto; }
+
+/* ---------- En-tête : identité + deck ---------- */
+.hero {
+	display: grid;
+	grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+	gap: clamp(28px, 5vw, 72px);
+	align-items: center;
+	padding: clamp(40px, 8vw, 96px) 0 clamp(32px, 5vw, 56px);
+}
+.who { max-width: 34rem; }
+.avatar {
+	width: 76px; height: 76px; border-radius: 18px;
+	display: block; margin-bottom: 22px;
+	background: var(--rule);
+	box-shadow: 0 0 0 4px var(--page), 0 0 0 5px var(--rule);
+}
+h1 {
+	font: 700 clamp(44px, 7vw, 76px)/0.95 var(--display);
+	letter-spacing: -0.01em;
+	margin: 0 0 18px;
+}
+.intro { font-size: 19px; color: var(--ink-soft); margin: 0 0 22px; max-width: 32rem; }
+.links { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 0; padding: 0; list-style: none; }
+.links a { font-weight: 700; }
+
+/* ---------- Le deck ---------- */
+.device {
+	container-type: inline-size;
+	background: linear-gradient(180deg, var(--device-edge) 0, var(--device) 7%, var(--device) 100%);
+	border-radius: 28px;
+	padding: clamp(14px, 3.2vw, 30px);
+	box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 30px 50px -28px rgba(10,14,20,.55);
+}
+.keys {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 2.6cqi;
+	background: var(--gap);
+	padding: 2.6cqi;
+	border-radius: 3.4cqi;
+}
+.key {
+	all: unset;
+	position: relative;
+	aspect-ratio: 1;
+	border-radius: 2.2cqi;
+	background: #1d2026;
+	cursor: pointer;
+	display: grid;
+	grid-template-rows: 1fr auto;
+	overflow: hidden;
+	box-shadow: 0 0 0 1px rgba(255,255,255,.04) inset;
+	transition: transform .08s ease, box-shadow .15s ease;
+	-webkit-tap-highlight-color: transparent;
+}
+.key[data-empty] { cursor: default; }
+.key .lcd {
+	position: absolute; inset: 0;
+	background: var(--k, #333);
+	display: grid; place-items: center;
+	color: #fff;
+}
+.key .glyph { font-size: 7.4cqi; line-height: 1; margin-top: -2.4cqi; }
+.key .glyph img { width: 9cqi; height: 9cqi; object-fit: contain; display: block; }
+.key .mono {
+	font: 700 6.2cqi/1 var(--display);
+	margin-top: -2.4cqi;
+	letter-spacing: .02em;
+}
+.key .name {
+	position: absolute; left: 0; right: 0; bottom: 0;
+	padding: .9cqi .8cqi 1.1cqi;
+	font: 600 max(8.5px, 2.15cqi)/1.1 var(--display);
+	color: #fff;
+	text-align: center;
+	background: rgba(0,0,0,.42);
+	overflow-wrap: anywhere;
+	display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* anneau de survol / de sélection dessiné au-dessus de l'écran de la touche */
+.key::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+.key:not([data-empty]):hover::after { box-shadow: 0 0 0 .5cqi rgba(255,255,255,.4) inset; }
+.key[aria-pressed="true"]::after { box-shadow: 0 0 0 .8cqi #ffd34d inset; }
+.key:active:not([data-empty]) { transform: scale(.95); }
+.key:focus-visible { outline: .6cqi solid var(--focus); outline-offset: .5cqi; }
+.key[data-all] .lcd { background: #3a414c; }
+
+/* Allumage du deck au chargement : le seul effet automatique de la page */
+@media (prefers-reduced-motion: no-preference) {
+	.booting .key .lcd { opacity: 0; }
+	.lit .key .lcd { animation: light .45s ease-out both; animation-delay: calc(var(--d) * 45ms); }
+	@keyframes light { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* Projets privés : grisés, cadenas, non cliquables */
+.key[data-locked] { cursor: not-allowed; }
+.key[data-locked] .lcd { filter: grayscale(1) brightness(.5); }
+.key[data-locked] .name { color: #aab2bd; background: rgba(0,0,0,.55); }
+.key[data-locked]:hover::after { box-shadow: none; }
+.key[data-locked]:active { transform: none; }
+.key .lock {
+	position: absolute; top: 1cqi; right: 1cqi;
+	width: 3.6cqi; height: 3.6cqi;
+	color: #e3e7ec;
+	filter: drop-shadow(0 1px 1px rgba(0,0,0,.6));
+}
+.key[data-nav] .lcd { background: #3a414c; }
+
+/* Infobulle au survol des touches */
+.tip {
+	position: fixed; z-index: 10;
+	max-width: 270px;
+	padding: 10px 13px 11px;
+	border-radius: 10px;
+	background: #f4f6f9;
+	color: #161a20;
+	font-size: 14px; line-height: 1.4;
+	box-shadow: 0 12px 30px -12px rgba(0,0,0,.55);
+	pointer-events: none;
+	opacity: 0;
+	transform: translateY(4px);
+	transition: opacity .12s ease, transform .12s ease;
+}
+.tip[data-show] { opacity: 1; transform: none; }
+.tip strong { display: block; font: 700 15px/1.25 var(--display); margin-bottom: 3px; }
+.tip p { margin: 0; color: #3a4350; }
+.tip .tmeta { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 7px; font-size: 13px; color: #5d6775; }
+.tip::after {
+	content: ""; position: absolute; left: var(--ax, 50%); bottom: -5px;
+	width: 10px; height: 10px; background: inherit;
+	transform: translateX(-50%) rotate(45deg);
+}
+.tip[data-below]::after { bottom: auto; top: -5px; }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
+
+/* ---------- Écran de détail sous le deck ---------- */
+.screen {
+	margin-top: 3cqi;
+	background: var(--gap);
+	color: #e8ecf1;
+	border-radius: 3cqi;
+	padding: 18px 20px 20px;
+	min-height: 150px;
+}
+.screen h2 {
+	font: 700 22px/1.15 var(--display);
+	margin: 0 0 6px;
+}
+.screen p { margin: 0 0 12px; color: #c4ccd6; font-size: 16px; max-width: 60ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: #9fa9b6; margin: 0 0 14px; padding: 0; list-style: none; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn {
+	display: inline-block;
+	padding: 8px 14px;
+	border-radius: 9px;
+	font: 600 15px/1.2 var(--display);
+	text-decoration: none;
+	color: #121418;
+	background: #ffd34d;
+}
+.btn.ghost { background: transparent; color: #e8ecf1; box-shadow: 0 0 0 1px #4a525e inset; }
+
+/* ---------- Liste complète ---------- */
+.all { padding: 24px 0 80px; border-top: 1px solid var(--rule); }
+.all h2 { font: 700 30px/1.1 var(--display); margin: 28px 0 18px; }
+.tools { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+.tools label { display: grid; gap: 4px; font-size: 14px; color: var(--ink-soft); }
+.tools input, .tools select {
+	font: inherit; font-size: 16px; color: var(--ink);
+	background: transparent;
+	border: 1px solid var(--rule); border-radius: 9px;
+	padding: 8px 12px; min-width: 200px;
+}
+.tools input { min-width: 260px; }
+.count { font-size: 14px; color: var(--ink-soft); margin: 14px 0 0; }
+.repos { list-style: none; margin: 0; padding: 0; }
+.repo {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 4px 24px;
+	padding: 18px 0;
+	border-bottom: 1px solid var(--rule);
+}
+.repo h3 { font: 700 20px/1.2 var(--display); margin: 0; }
+.repo h3 a { text-decoration: none; color: var(--ink); }
+.repo h3 a:hover { text-decoration: underline; }
+.repo p { margin: 2px 0 0; color: var(--ink-soft); max-width: 70ch; }
+.repo .meta { color: var(--ink-soft); margin: 8px 0 0; }
+.repo .side { text-align: right; font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag { font-size: 13px; padding: 1px 9px; border-radius: 99px; background: color-mix(in srgb, var(--link) 12%, transparent); color: var(--link); }
+.badge { font-size: 13px; padding: 1px 8px; border-radius: 6px; box-shadow: 0 0 0 1px var(--rule) inset; color: var(--ink-soft); margin-left: 8px; vertical-align: 3px; }
+.notice { padding: 18px 20px; border-radius: 12px; box-shadow: 0 0 0 1px var(--rule) inset; color: var(--ink-soft); }
+footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-top: 1px solid var(--rule); }
+
+@media (max-width: 860px) {
+	.hero { grid-template-columns: 1fr; }
+	.device { max-width: 600px; }
+}
+@media (max-width: 560px) {
+	body { font-size: 16px; }
+	.repo { grid-template-columns: 1fr; }
+	.repo .side { text-align: left; }
+	.tools input, .tools select { min-width: 0; width: 100%; }
+	.tools label { flex: 1 1 100%; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+	<header class="hero">
+		<div class="who">
+			<img class="avatar" id="avatar" alt="" width="76" height="76">
+			<h1 id="name">Mes projets</h1>
+			<p class="intro" id="intro" hidden></p>
+			<ul class="links" id="links"></ul>
+		</div>
+		<div>
+			<div class="device booting" id="device">
+				<div class="keys" id="keys" role="group" aria-label="Projets mis en avant"></div>
+				<section class="screen" id="screen" aria-live="polite"></section>
+			</div>
+		</div>
+	</header>
+
+	<main class="all" id="tous">
+		<h2>Tous les dépôts</h2>
+		<div class="tools">
+			<label>Rechercher
+				<input id="q" type="search" placeholder="Nom, description, sujet" autocomplete="off">
+			</label>
+			<label>Langage
+				<select id="lang"><option value="">Tous</option></select>
+			</label>
+			<label>Trier par
+				<select id="sort">
+					<option value="updated">Mis à jour récemment</option>
+					<option value="stars">Étoiles</option>
+					<option value="name">Nom</option>
+				</select>
+			</label>
+		</div>
+		<p class="count" id="count"></p>
+		<ul class="repos" id="repos"></ul>
+	</main>
+</div>
+<footer><div class="wrap" id="foot"></div></footer>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+(() => {
+	"use strict";
+	const $ = (s) => document.querySelector(s);
+	if (typeof CONFIG === "undefined") {
+		// Le bloc de réglages contient une erreur de syntaxe : on l'explique au lieu d'afficher une page vide
+		const e = window.__configError;
+		$("#screen").innerHTML = `<h2>Erreur dans les réglages</h2><p>Le bloc CONFIG, en haut de index.html, contient une erreur${e?.lineno ? ` vers la ligne ${e.lineno}` : ""}. Le plus souvent, il manque une virgule entre deux lignes { … }.</p>`;
+		$("#device").classList.remove("booting");
+		return;
+	}
+	const PALETTE = ["#6b3fa0", "#2e7d5b", "#8a5a2b", "#a83232", "#1f6fa8", "#4f5866"];
+	const LANG_COLORS = {
+		JavaScript: "#f1e05a", TypeScript: "#3178c6", Python: "#3572A5", Swift: "#F05138", HTML: "#e34c26",
+		CSS: "#663399", SCSS: "#c6538c", Less: "#1d365d", Shell: "#89e051", Go: "#00ADD8", Rust: "#dea584",
+		Java: "#b07219", Kotlin: "#A97BFF", "C#": "#178600", "C++": "#f34b7d", C: "#555555", PHP: "#4F5D95",
+		Ruby: "#701516", Lua: "#000080", Dart: "#00B4AB", Vue: "#41b883", Handlebars: "#f7931e", "Jupyter Notebook": "#DA5B0B"
+	};
+	const KEYS = 15;
+	const CACHE_MS = 60 * 60 * 1000;
+
+	// Identifiant : détecté depuis <identifiant>.github.io, sinon CONFIG.user
+	const host = location.hostname.toLowerCase();
+	const USER = host.endsWith(".github.io") ? host.replace(".github.io", "") : CONFIG.user;
+	const HIDDEN = new Set([...CONFIG.hidden, `${USER}.github.io`, USER].map((s) => s.toLowerCase()));
+
+	const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+	const rtf = new Intl.RelativeTimeFormat("fr", { numeric: "auto" });
+	function ago(iso) {
+		const s = (new Date(iso) - Date.now()) / 1000;
+		const steps = [[60, "second"], [60, "minute"], [24, "hour"], [30, "day"], [12, "month"], [Infinity, "year"]];
+		let v = s;
+		for (const [n, unit] of steps) {
+			if (Math.abs(v) < n) return rtf.format(Math.round(v), unit);
+			v /= n;
+		}
+	}
+	const langDot = (l) => (l ? `<span class="dot" style="background:${LANG_COLORS[l] ?? "#8a94a3"}"></span>${esc(l)}` : "");
+	const initials = (name) => {
+		const parts = name.replace(/[-_.]+/g, " ").trim().split(/\s+|(?=[A-Z][a-z])/).filter(Boolean);
+		return (parts.length > 1 ? parts[0][0] + parts[1][0] : name.slice(0, 2)).toUpperCase();
+	};
+	const pretty = (name) => name.replace(/[-_]+/g, " ");
+
+	/* ---------- Données GitHub (avec cache d'une heure) ---------- */
+	async function getJSON(url) {
+		const r = await fetch(url, { headers: { Accept: "application/vnd.github+json" } });
+		if (!r.ok) {
+			const err = new Error(`HTTP ${r.status}`);
+			err.status = r.status;
+			err.limited = r.status === 403 || r.status === 429;
+			throw err;
+		}
+		return { data: await r.json(), next: /<([^>]+)>;\s*rel="next"/.exec(r.headers.get("Link") ?? "")?.[1] };
+	}
+
+	async function load() {
+		const key = `repos-page:v1:${USER}`;
+		let cached = null;
+		try { cached = JSON.parse(localStorage.getItem(key)); } catch { /* stockage indisponible */ }
+		if (cached && Date.now() - cached.t < CACHE_MS) return cached;
+		try {
+			const profile = (await getJSON(`https://api.github.com/users/${encodeURIComponent(USER)}`)).data;
+			let repos = [];
+			let url = `https://api.github.com/users/${encodeURIComponent(USER)}/repos?per_page=100&sort=updated&type=owner`;
+			for (let i = 0; url && i < 5; i++) {
+				const page = await getJSON(url);
+				repos = repos.concat(page.data);
+				url = page.next;
+			}
+			const fresh = { t: Date.now(), profile, repos };
+			try { localStorage.setItem(key, JSON.stringify(fresh)); } catch { /* ignore */ }
+			return fresh;
+		} catch (err) {
+			if (cached) return { ...cached, stale: true };
+			throw err;
+		}
+	}
+
+	/* ---------- Deck : pages, touches, écran ---------- */
+	const clean = (list) => (list ?? []).filter((p) => p && p.label);
+	// Pages privées : d'abord les projets privés personnels, puis une page par organisation
+	const LOCKED = [
+		{ title: "Projets privés", text: "", url: "", group: "", items: clean(CONFIG.private) },
+		...(CONFIG.groups ?? []).map((g) => ({ title: g.name || "Projets privés", text: g.text || "", url: g.url || "", group: g.name || "", items: clean(g.projects) }))
+	].filter((pg) => pg.items.length);
+	const MULTI = LOCKED.length > 0;
+	const SLOTS = MULTI ? KEYS - 2 : KEYS - 1;   // touches de contenu par page (le reste sert à naviguer)
+	const LOCK_SVG = `<svg class="lock" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1Zm2 0h6V7a3 3 0 0 0-6 0v3Z"/></svg>`;
+	let pages = [];      // pages[n] = { title, items, locked, text, url }
+	let page = 0;
+	let selected = null; // élément public affiché sur l'écran
+
+	function buildDeck(repos) {
+		const byName = new Map(repos.map((r) => [r.name.toLowerCase(), r]));
+		const used = new Set();
+		const pub = [];
+		for (const f of CONFIG.featured) {
+			const repo = f.repo ? byName.get(f.repo.toLowerCase()) : null;
+			if (f.repo && !repo && !f.text && !(f.links ?? []).some((l) => l.url)) continue; // dépôt absent ou privé, rien à montrer
+			if (repo) used.add(repo.name.toLowerCase());
+			pub.push({ ...f, repo, label: f.label || repo?.name });
+		}
+		// Les touches restantes de la première page reprennent les dépôts les plus récemment mis à jour
+		for (const r of repos) {
+			if (pub.length >= SLOTS) break;
+			if (used.has(r.name.toLowerCase()) || r.fork || r.archived) continue;
+			pub.push({ repo: r, label: pretty(r.name) });
+		}
+		pages = [{ title: "Projets publics", items: pub.slice(0, SLOTS), locked: false }];
+		for (const pg of LOCKED) {
+			for (let i = 0; i < pg.items.length; i += SLOTS) {
+				pages.push({ ...pg, locked: true, items: pg.items.slice(i, i + SLOTS).map((p) => ({ ...p, locked: true, group: pg.group })) });
+			}
+		}
+		page = 0;
+		selected = pages[0].items[0] ?? null;
+		renderPage();
+		renderScreen();
+	}
+
+	function glyphHTML(it, i) {
+		if (it.icon) {
+			return /^(https?:|\.?\/|data:)/.test(it.icon)
+				? `<span class="glyph"><img src="${esc(it.icon)}" alt=""></span>`
+				: `<span class="glyph" aria-hidden="true">${esc(it.icon)}</span>`;
+		}
+		return `<span class="mono" aria-hidden="true">${esc(initials(it.repo?.name ?? it.label))}</span>`;
+	}
+
+	function renderPage(focusNav = false) {
+		hideTip();
+		const items = pages[page]?.items ?? [];
+		const allSlot = MULTI ? KEYS - 2 : KEYS - 1;
+		const keys = $("#keys");
+		keys.replaceChildren();
+		for (let i = 0; i < KEYS; i++) {
+			const b = document.createElement("button");
+			b.className = "key";
+			b.type = "button";
+			b.style.setProperty("--d", String((i % 5) + Math.floor(i / 5)));
+			if (MULTI && i === KEYS - 1) {
+				// Touche « page suivante », comme sur un vrai Stream Deck
+				const next = (page + 1) % pages.length;
+				const label = next === 0 ? "Première page" : pages[next].title;
+				b.dataset.nav = "";
+				b.setAttribute("aria-label", `${label} (page ${page + 1} sur ${pages.length})`);
+				b.innerHTML = `<span class="lcd"><span class="mono">${page + 1}/${pages.length}</span></span><span class="name">${label}</span>`;
+				b.addEventListener("click", () => {
+					page = next;
+					renderPage(true);
+					renderScreen();
+				});
+				withTip(b, () => `<strong>${label}</strong><p>Affiche la page ${next + 1} sur ${pages.length} du deck.</p>`);
+			} else if (i === allSlot) {
+				b.dataset.nav = "";
+				b.setAttribute("aria-label", "Voir tous les dépôts publics");
+				b.innerHTML = `<span class="lcd"><span class="glyph">📚</span></span><span class="name">Tout voir</span>`;
+				b.addEventListener("click", () => $("#tous").scrollIntoView());
+				withTip(b, () => `<strong>Tout voir</strong><p>Liste complète des dépôts publics, plus bas sur la page.</p>`);
+			} else if (items[i]) {
+				const it = items[i];
+				b.innerHTML = `<span class="lcd" style="--k:${esc(it.color || PALETTE[i % PALETTE.length])}">${glyphHTML(it, i)}</span><span class="name">${esc(it.label)}</span>`;
+				if (it.locked) {
+					b.dataset.locked = "";
+					b.setAttribute("aria-disabled", "true");
+					b.setAttribute("aria-label", `${it.label} (projet privé${it.group ? ` de ${it.group}` : ""})`);
+					b.insertAdjacentHTML("beforeend", LOCK_SVG);
+					// Sans souris (écran tactile), un appui affiche la courte fiche sur l'écran du deck
+					b.addEventListener("click", () => renderScreen(it));
+					withTip(b, () => `<strong>${esc(it.label)}</strong>${it.text ? `<p>${esc(it.text)}</p>` : ""}<div class="tmeta"><span>${esc(lockedNote(it))}</span></div>`);
+				} else {
+					b.setAttribute("aria-pressed", String(it === selected));
+					b.addEventListener("click", () => {
+						selected = it;
+						keys.querySelectorAll("[aria-pressed]").forEach((k) => k.setAttribute("aria-pressed", String(k === b)));
+						renderScreen();
+					});
+					withTip(b, () => publicTip(it));
+				}
+			} else {
+				b.dataset.empty = "";
+				b.tabIndex = -1;
+				b.setAttribute("aria-hidden", "true");
+				b.innerHTML = `<span class="lcd" style="--k:#1d2026"></span>`;
+			}
+			keys.append(b);
+		}
+		if (focusNav) keys.lastElementChild.focus();
+	}
+
+	const lockedNote = (it) => `Dépôt privé${it.group ? ` de ${it.group}` : ""}, non consultable`;
+
+	function renderScreen(lockedItem = null) {
+		const screen = $("#screen");
+		const pg = pages[page];
+		if (lockedItem || pg?.locked) {
+			const it = lockedItem;
+			screen.innerHTML = it
+				? `<h2>${esc(it.label)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ""}<ul class="meta"><li>${esc(lockedNote(it))}</li></ul>`
+				: `<h2>${esc(pg.title)}</h2><p>${esc(pg.text || "Ces projets ne sont pas publics : leur code n'est pas consultable.")}</p>${pg.url ? `<div class="actions"><a class="btn ghost" href="${esc(pg.url)}">Voir ${esc(pg.group || "l'organisation")} sur GitHub</a></div>` : ""}`;
+			return;
+		}
+		const it = selected;
+		if (!it) {
+			screen.innerHTML = `<p>Les projets mis en avant apparaîtront ici dès qu'un dépôt public sera disponible.</p>`;
+			return;
+		}
+		const r = it.repo;
+		const text = it.text || r?.description || "";
+		const meta = r
+			? `<ul class="meta">
+				${r.language ? `<li>${langDot(r.language)}</li>` : ""}
+				${r.stargazers_count ? `<li>★ ${r.stargazers_count}</li>` : ""}
+				<li>Mis à jour ${esc(ago(r.pushed_at || r.updated_at))}</li>
+			</ul>`
+			: "";
+		const links = [
+			r ? `<a class="btn" href="${esc(r.html_url)}">Voir le dépôt</a>` : "",
+			r?.homepage ? `<a class="btn ghost" href="${esc(r.homepage)}">Site du projet</a>` : "",
+			...(it.links ?? []).filter((l) => l.url).map((l) => `<a class="btn ghost" href="${esc(l.url)}">${esc(l.label)}</a>`)
+		].join("");
+		screen.innerHTML = `<h2>${esc(it.label)}</h2>${text ? `<p>${esc(text)}</p>` : ""}${meta}<div class="actions">${links}</div>`;
+	}
+
+	/* ---------- Infobulles ---------- */
+	const tip = $("#tip");
+	let tipTimer = null;
+	const shorten = (s, n = 140) => (s.length <= n ? s : `${s.slice(0, s.lastIndexOf(" ", n) > 60 ? s.lastIndexOf(" ", n) : n)}…`);
+
+	function publicTip(it) {
+		const r = it.repo;
+		const text = it.text || r?.description || "Pas encore de description.";
+		const meta = r
+			? `<div class="tmeta">${r.language ? `<span>${langDot(r.language)}</span>` : ""}${r.stargazers_count ? `<span>★ ${r.stargazers_count}</span>` : ""}<span>Mis à jour ${esc(ago(r.pushed_at || r.updated_at))}</span></div>`
+			: "";
+		return `<strong>${esc(it.label)}</strong><p>${esc(shorten(text))}</p>${meta}`;
+	}
+
+	function showTip(el, html) {
+		tip.innerHTML = html;
+		tip.removeAttribute("data-below");
+		tip.setAttribute("data-show", "");
+		const k = el.getBoundingClientRect();
+		const t = tip.getBoundingClientRect();
+		const left = Math.min(Math.max(8, k.left + k.width / 2 - t.width / 2), innerWidth - t.width - 8);
+		let top = k.top - t.height - 10;
+		if (top < 8) {
+			top = k.bottom + 10;
+			tip.setAttribute("data-below", "");
+		}
+		tip.style.left = `${left}px`;
+		tip.style.top = `${top}px`;
+		tip.style.setProperty("--ax", `${k.left + k.width / 2 - left}px`);
+		el.setAttribute("aria-describedby", "tip");
+	}
+
+	function hideTip() {
+		clearTimeout(tipTimer);
+		tip.removeAttribute("data-show");
+		document.querySelectorAll("[aria-describedby=tip]").forEach((e) => e.removeAttribute("aria-describedby"));
+	}
+
+	function withTip(el, html) {
+		el.addEventListener("pointerenter", (e) => {
+			if (e.pointerType === "touch") return;
+			clearTimeout(tipTimer);
+			tipTimer = setTimeout(() => showTip(el, html()), 250);
+		});
+		el.addEventListener("pointerleave", hideTip);
+		el.addEventListener("focus", () => el.matches(":focus-visible") && showTip(el, html()));
+		el.addEventListener("blur", hideTip);
+		el.addEventListener("click", hideTip);
+	}
+	addEventListener("scroll", hideTip, { passive: true });
+	addEventListener("keydown", (e) => e.key === "Escape" && hideTip());
+
+	/* ---------- Liste complète ---------- */
+	let all = [];
+	function renderList() {
+		const q = $("#q").value.trim().toLowerCase();
+		const lang = $("#lang").value;
+		const sort = $("#sort").value;
+		let list = all.filter((r) => {
+			if (lang && r.language !== lang) return false;
+			if (!q) return true;
+			return [r.name, r.description, ...(r.topics ?? [])].some((s) => s && s.toLowerCase().includes(q));
+		});
+		list.sort((a, b) =>
+			sort === "stars" ? b.stargazers_count - a.stargazers_count || a.name.localeCompare(b.name)
+			: sort === "name" ? a.name.localeCompare(b.name, "fr", { sensitivity: "base" })
+			: new Date(b.pushed_at || b.updated_at) - new Date(a.pushed_at || a.updated_at)
+		);
+		$("#count").textContent = list.length === all.length
+			? `${all.length} dépôt${all.length > 1 ? "s" : ""} public${all.length > 1 ? "s" : ""}`
+			: `${list.length} sur ${all.length}`;
+		const ul = $("#repos");
+		if (!list.length) {
+			ul.innerHTML = `<li class="notice">Aucun dépôt ne correspond. Effacez la recherche ou choisissez « Tous » dans Langage.</li>`;
+			return;
+		}
+		ul.innerHTML = list.map((r) => `
+			<li class="repo">
+				<div>
+					<h3><a href="${esc(r.html_url)}">${esc(r.name)}</a>${r.fork ? `<span class="badge">fork</span>` : ""}${r.archived ? `<span class="badge">archivé</span>` : ""}</h3>
+					${r.description ? `<p>${esc(r.description)}</p>` : ""}
+					${r.topics?.length ? `<div class="tags">${r.topics.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>` : ""}
+					${r.homepage ? `<ul class="meta"><li><a href="${esc(r.homepage)}">Site du projet</a></li></ul>` : ""}
+				</div>
+				<div class="side">
+					${r.language ? `<div>${langDot(r.language)}</div>` : ""}
+					${r.stargazers_count ? `<div>★ ${r.stargazers_count}</div>` : ""}
+					<div>${esc(ago(r.pushed_at || r.updated_at))}</div>
+				</div>
+			</li>`).join("");
+	}
+
+	/* ---------- Identité ---------- */
+	function renderProfile(p) {
+		const name = CONFIG.name || p?.name || USER;
+		document.title = `${name} — projets`;
+		$("#name").textContent = name;
+		const intro = CONFIG.intro || p?.bio;
+		if (intro) { $("#intro").textContent = intro; $("#intro").hidden = false; }
+		if (p?.avatar_url) { $("#avatar").src = p.avatar_url; $("#avatar").alt = `Avatar de ${name}`; }
+		else $("#avatar").hidden = true;
+		const links = [...CONFIG.links];
+		if (p?.blog && !links.some((l) => l.url === p.blog)) links.push({ label: "Site web", url: p.blog.startsWith("http") ? p.blog : `https://${p.blog}` });
+		$("#links").innerHTML = links
+			.map((l) => (l.url === "auto" ? { ...l, url: `https://github.com/${USER}` } : l))
+			.filter((l) => l.url)
+			.filter((l, i, arr) => arr.findIndex((x) => x.url === l.url) === i)
+			.map((l) => `<li><a href="${esc(l.url)}">${esc(l.label)}</a></li>`)
+			.join("");
+		$("#foot").innerHTML = `Liste mise à jour automatiquement depuis <a href="https://github.com/${esc(USER)}">github.com/${esc(USER)}</a>.`;
+	}
+
+	function lightUp() {
+		const d = $("#device");
+		requestAnimationFrame(() => { d.classList.remove("booting"); d.classList.add("lit"); });
+	}
+
+	/* ---------- Démarrage ---------- */
+	(async () => {
+		if (!USER || USER === "VOTRE-COMPTE") {
+			renderProfile(null);
+			buildDeck([]);
+			$("#screen").innerHTML = `<h2>Réglage nécessaire</h2><p>Indiquez votre identifiant GitHub dans CONFIG.user, en haut du fichier index.html.</p>`;
+			lightUp();
+			return;
+		}
+		try {
+			const { profile, repos, stale } = await load();
+			all = repos.filter((r) => !HIDDEN.has(r.name.toLowerCase()) && (CONFIG.showForks || !r.fork));
+			renderProfile(profile);
+			buildDeck(all);
+			const langs = [...new Set(all.map((r) => r.language).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr"));
+			$("#lang").insertAdjacentHTML("beforeend", langs.map((l) => `<option>${esc(l)}</option>`).join(""));
+			for (const id of ["#q", "#lang", "#sort"]) $(id).addEventListener("input", renderList);
+			renderList();
+			if (stale) $("#count").textContent += " (copie locale : GitHub n'a pas répondu)";
+		} catch (err) {
+			renderProfile(null);
+			buildDeck([]);
+			const msg = err.limited
+				? "GitHub limite le nombre de consultations depuis votre connexion (60 par heure). La liste réapparaîtra dans quelques minutes."
+				: err.status === 404
+					? `Le compte GitHub « ${esc(USER)} » est introuvable. Vérifiez CONFIG.user en haut du fichier index.html.`
+					: "Impossible de joindre GitHub pour le moment. Vérifiez votre connexion puis rechargez la page.";
+			$("#repos").innerHTML = `<li class="notice">${msg} Vous pouvez aussi consulter les dépôts sur <a href="https://github.com/${esc(USER)}">github.com/${esc(USER)}</a>.</li>`;
+			$("#screen").innerHTML = `<p>${msg}</p>`;
+		}
+		lightUp();
+	})();
+})();
+</script>
+</body>
+</html>
