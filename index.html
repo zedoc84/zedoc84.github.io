@@ -44,7 +44,17 @@ const CONFIG = {
 				{ label: "Plugin Stream Deck", url: "" }
 			]
 		}
+		// Une version payante avec un lien d'achat peut aussi être mise en avant ici (touche cliquable) :
 		// { repo: "", label: "VTT Deck Pro", icon: "⭐", color: "#8a5a2b", text: "…", links: [{ label: "Acheter", url: "" }] },
+	],
+
+	// Projets privés : affichés sur la page suivante du deck, grisés avec un cadenas, non cliquables.
+	// GitHub ne montre jamais les dépôts privés aux visiteurs : ils se déclarent donc ici, à la main.
+	// N'écrivez que ce que vous acceptez de rendre public (un nom vague suffit).
+	// text : courte description affichée au survol (facultatif)
+	private: [
+		{ label: "VTT Deck Pro", icon: "⭐", text: "Extension payante de VTT Deck." }
+		// { label: "Projet santé", icon: "🩺", text: "" },
 	],
 
 	// Dépôts à ne jamais afficher (le dépôt de ce site et celui du README de profil le sont déjà)
@@ -182,10 +192,51 @@ h1 {
 
 /* Allumage du deck au chargement : le seul effet automatique de la page */
 @media (prefers-reduced-motion: no-preference) {
-	.booting .key .lcd { opacity: 0; filter: brightness(.3); }
+	.booting .key .lcd { opacity: 0; }
 	.lit .key .lcd { animation: light .45s ease-out both; animation-delay: calc(var(--d) * 45ms); }
-	@keyframes light { from { opacity: 0; filter: brightness(.3); } to { opacity: 1; filter: none; } }
+	@keyframes light { from { opacity: 0; } to { opacity: 1; } }
 }
+
+/* Projets privés : grisés, cadenas, non cliquables */
+.key[data-locked] { cursor: not-allowed; }
+.key[data-locked] .lcd { filter: grayscale(1) brightness(.5); }
+.key[data-locked] .name { color: #aab2bd; background: rgba(0,0,0,.55); }
+.key[data-locked]:hover::after { box-shadow: none; }
+.key[data-locked]:active { transform: none; }
+.key .lock {
+	position: absolute; top: 1cqi; right: 1cqi;
+	width: 3.6cqi; height: 3.6cqi;
+	color: #e3e7ec;
+	filter: drop-shadow(0 1px 1px rgba(0,0,0,.6));
+}
+.key[data-nav] .lcd { background: #3a414c; }
+
+/* Infobulle au survol des touches */
+.tip {
+	position: fixed; z-index: 10;
+	max-width: 270px;
+	padding: 10px 13px 11px;
+	border-radius: 10px;
+	background: #f4f6f9;
+	color: #161a20;
+	font-size: 14px; line-height: 1.4;
+	box-shadow: 0 12px 30px -12px rgba(0,0,0,.55);
+	pointer-events: none;
+	opacity: 0;
+	transform: translateY(4px);
+	transition: opacity .12s ease, transform .12s ease;
+}
+.tip[data-show] { opacity: 1; transform: none; }
+.tip strong { display: block; font: 700 15px/1.25 var(--display); margin-bottom: 3px; }
+.tip p { margin: 0; color: #3a4350; }
+.tip .tmeta { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 7px; font-size: 13px; color: #5d6775; }
+.tip::after {
+	content: ""; position: absolute; left: var(--ax, 50%); bottom: -5px;
+	width: 10px; height: 10px; background: inherit;
+	transform: translateX(-50%) rotate(45deg);
+}
+.tip[data-below]::after { bottom: auto; top: -5px; }
+@media (prefers-reduced-motion: reduce) { .tip { transition: none; } }
 
 /* ---------- Écran de détail sous le deck ---------- */
 .screen {
@@ -300,6 +351,7 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 	</main>
 </div>
 <footer><div class="wrap" id="foot"></div></footer>
+<div class="tip" id="tip" role="tooltip"></div>
 
 <script>
 (() => {
@@ -373,25 +425,54 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 		}
 	}
 
-	/* ---------- Deck ---------- */
-	let deckItems = [];
+	/* ---------- Deck : pages, touches, écran ---------- */
+	const PRIVATE = (CONFIG.private ?? []).filter((p) => p && p.label);
+	const MULTI = PRIVATE.length > 0;
+	const SLOTS = MULTI ? KEYS - 2 : KEYS - 1;   // touches de contenu par page (le reste sert à naviguer)
+	const LOCK_SVG = `<svg class="lock" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1Zm2 0h6V7a3 3 0 0 0-6 0v3Z"/></svg>`;
+	let pages = [];      // pages[n] = éléments affichés sur la page n
+	let page = 0;
+	let selected = null; // élément public affiché sur l'écran
+
 	function buildDeck(repos) {
 		const byName = new Map(repos.map((r) => [r.name.toLowerCase(), r]));
 		const used = new Set();
-		const items = [];
+		const pub = [];
 		for (const f of CONFIG.featured) {
 			const repo = f.repo ? byName.get(f.repo.toLowerCase()) : null;
 			if (f.repo && !repo && !f.text && !(f.links ?? []).some((l) => l.url)) continue; // dépôt absent ou privé, rien à montrer
 			if (repo) used.add(repo.name.toLowerCase());
-			items.push({ ...f, repo, label: f.label || repo?.name });
+			pub.push({ ...f, repo, label: f.label || repo?.name });
 		}
-		// Les touches restantes reprennent les dépôts les plus récemment mis à jour
-		const rest = repos.filter((r) => !used.has(r.name.toLowerCase()) && !r.fork && !r.archived);
-		for (const r of rest) {
-			if (items.length >= KEYS - 1) break;
-			items.push({ repo: r, label: pretty(r.name), auto: true });
+		// Les touches restantes de la première page reprennent les dépôts les plus récemment mis à jour
+		for (const r of repos) {
+			if (pub.length >= SLOTS) break;
+			if (used.has(r.name.toLowerCase()) || r.fork || r.archived) continue;
+			pub.push({ repo: r, label: pretty(r.name) });
 		}
-		deckItems = items;
+		pages = [pub.slice(0, SLOTS)];
+		for (let i = 0; i < PRIVATE.length; i += SLOTS) {
+			pages.push(PRIVATE.slice(i, i + SLOTS).map((p) => ({ ...p, locked: true })));
+		}
+		page = 0;
+		selected = pages[0][0] ?? null;
+		renderPage();
+		renderScreen();
+	}
+
+	function glyphHTML(it, i) {
+		if (it.icon) {
+			return /^(https?:|\.?\/|data:)/.test(it.icon)
+				? `<span class="glyph"><img src="${esc(it.icon)}" alt=""></span>`
+				: `<span class="glyph" aria-hidden="true">${esc(it.icon)}</span>`;
+		}
+		return `<span class="mono" aria-hidden="true">${esc(initials(it.repo?.name ?? it.label))}</span>`;
+	}
+
+	function renderPage(focusNav = false) {
+		hideTip();
+		const items = pages[page] ?? [];
+		const allSlot = MULTI ? KEYS - 2 : KEYS - 1;
 		const keys = $("#keys");
 		keys.replaceChildren();
 		for (let i = 0; i < KEYS; i++) {
@@ -399,23 +480,46 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 			b.className = "key";
 			b.type = "button";
 			b.style.setProperty("--d", String((i % 5) + Math.floor(i / 5)));
-			if (i === KEYS - 1) {
-				b.dataset.all = "";
-				b.setAttribute("aria-label", "Voir tous les dépôts");
+			if (MULTI && i === KEYS - 1) {
+				// Touche « page suivante », comme sur un vrai Stream Deck
+				const next = (page + 1) % pages.length;
+				const goesPrivate = !items[0]?.locked && pages[next][0]?.locked;
+				const label = next === 0 ? "Première page" : goesPrivate ? "Projets privés" : "Page suivante";
+				b.dataset.nav = "";
+				b.setAttribute("aria-label", `${label} (page ${page + 1} sur ${pages.length})`);
+				b.innerHTML = `<span class="lcd"><span class="mono">${page + 1}/${pages.length}</span></span><span class="name">${label}</span>`;
+				b.addEventListener("click", () => {
+					page = next;
+					renderPage(true);
+					renderScreen();
+				});
+				withTip(b, () => `<strong>${label}</strong><p>Affiche la page ${next + 1} sur ${pages.length} du deck.</p>`);
+			} else if (i === allSlot) {
+				b.dataset.nav = "";
+				b.setAttribute("aria-label", "Voir tous les dépôts publics");
 				b.innerHTML = `<span class="lcd"><span class="glyph">📚</span></span><span class="name">Tout voir</span>`;
 				b.addEventListener("click", () => $("#tous").scrollIntoView());
+				withTip(b, () => `<strong>Tout voir</strong><p>Liste complète des dépôts publics, plus bas sur la page.</p>`);
 			} else if (items[i]) {
 				const it = items[i];
-				const color = it.color || PALETTE[i % PALETTE.length];
-				const glyph = it.icon
-					? /^(https?:|\.?\/|data:)/.test(it.icon)
-						? `<span class="glyph"><img src="${esc(it.icon)}" alt=""></span>`
-						: `<span class="glyph" aria-hidden="true">${esc(it.icon)}</span>`
-					: `<span class="mono" aria-hidden="true">${esc(initials(it.repo?.name ?? it.label))}</span>`;
-				b.style.setProperty("--k", color);
-				b.setAttribute("aria-pressed", "false");
-				b.innerHTML = `<span class="lcd" style="--k:${esc(color)}">${glyph}</span><span class="name">${esc(it.label)}</span>`;
-				b.addEventListener("click", () => select(i));
+				b.innerHTML = `<span class="lcd" style="--k:${esc(it.color || PALETTE[i % PALETTE.length])}">${glyphHTML(it, i)}</span><span class="name">${esc(it.label)}</span>`;
+				if (it.locked) {
+					b.dataset.locked = "";
+					b.setAttribute("aria-disabled", "true");
+					b.setAttribute("aria-label", `${it.label} (projet privé)`);
+					b.insertAdjacentHTML("beforeend", LOCK_SVG);
+					// Sans souris (écran tactile), un appui affiche la courte fiche sur l'écran du deck
+					b.addEventListener("click", () => renderScreen(it));
+					withTip(b, () => `<strong>${esc(it.label)}</strong>${it.text ? `<p>${esc(it.text)}</p>` : ""}<div class="tmeta"><span>Dépôt privé, non consultable</span></div>`);
+				} else {
+					b.setAttribute("aria-pressed", String(it === selected));
+					b.addEventListener("click", () => {
+						selected = it;
+						keys.querySelectorAll("[aria-pressed]").forEach((k) => k.setAttribute("aria-pressed", String(k === b)));
+						renderScreen();
+					});
+					withTip(b, () => publicTip(it));
+				}
 			} else {
 				b.dataset.empty = "";
 				b.tabIndex = -1;
@@ -424,14 +528,24 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 			}
 			keys.append(b);
 		}
-		if (items.length) select(0);
-		else $("#screen").innerHTML = `<p>Les projets mis en avant apparaîtront ici dès qu'un dépôt public sera disponible.</p>`;
+		if (focusNav) keys.lastElementChild.focus();
 	}
 
-	function select(i) {
-		const it = deckItems[i];
-		if (!it) return;
-		document.querySelectorAll(".key[aria-pressed]").forEach((k, n) => k.setAttribute("aria-pressed", String(n === i)));
+	function renderScreen(lockedItem = null) {
+		const screen = $("#screen");
+		const items = pages[page] ?? [];
+		if (lockedItem || items[0]?.locked) {
+			const it = lockedItem;
+			screen.innerHTML = it
+				? `<h2>${esc(it.label)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ""}<ul class="meta"><li>Dépôt privé, non consultable</li></ul>`
+				: `<h2>Projets privés</h2><p>Ces projets ne sont pas publics : leur code n'est pas consultable.</p>`;
+			return;
+		}
+		const it = selected;
+		if (!it) {
+			screen.innerHTML = `<p>Les projets mis en avant apparaîtront ici dès qu'un dépôt public sera disponible.</p>`;
+			return;
+		}
 		const r = it.repo;
 		const text = it.text || r?.description || "";
 		const meta = r
@@ -446,8 +560,60 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 			r?.homepage ? `<a class="btn ghost" href="${esc(r.homepage)}">Site du projet</a>` : "",
 			...(it.links ?? []).filter((l) => l.url).map((l) => `<a class="btn ghost" href="${esc(l.url)}">${esc(l.label)}</a>`)
 		].join("");
-		$("#screen").innerHTML = `<h2>${esc(it.label)}</h2>${text ? `<p>${esc(text)}</p>` : ""}${meta}<div class="actions">${links}</div>`;
+		screen.innerHTML = `<h2>${esc(it.label)}</h2>${text ? `<p>${esc(text)}</p>` : ""}${meta}<div class="actions">${links}</div>`;
 	}
+
+	/* ---------- Infobulles ---------- */
+	const tip = $("#tip");
+	let tipTimer = null;
+	const shorten = (s, n = 140) => (s.length <= n ? s : `${s.slice(0, s.lastIndexOf(" ", n) > 60 ? s.lastIndexOf(" ", n) : n)}…`);
+
+	function publicTip(it) {
+		const r = it.repo;
+		const text = it.text || r?.description || "Pas encore de description.";
+		const meta = r
+			? `<div class="tmeta">${r.language ? `<span>${langDot(r.language)}</span>` : ""}${r.stargazers_count ? `<span>★ ${r.stargazers_count}</span>` : ""}<span>Mis à jour ${esc(ago(r.pushed_at || r.updated_at))}</span></div>`
+			: "";
+		return `<strong>${esc(it.label)}</strong><p>${esc(shorten(text))}</p>${meta}`;
+	}
+
+	function showTip(el, html) {
+		tip.innerHTML = html;
+		tip.removeAttribute("data-below");
+		tip.setAttribute("data-show", "");
+		const k = el.getBoundingClientRect();
+		const t = tip.getBoundingClientRect();
+		const left = Math.min(Math.max(8, k.left + k.width / 2 - t.width / 2), innerWidth - t.width - 8);
+		let top = k.top - t.height - 10;
+		if (top < 8) {
+			top = k.bottom + 10;
+			tip.setAttribute("data-below", "");
+		}
+		tip.style.left = `${left}px`;
+		tip.style.top = `${top}px`;
+		tip.style.setProperty("--ax", `${k.left + k.width / 2 - left}px`);
+		el.setAttribute("aria-describedby", "tip");
+	}
+
+	function hideTip() {
+		clearTimeout(tipTimer);
+		tip.removeAttribute("data-show");
+		document.querySelectorAll("[aria-describedby=tip]").forEach((e) => e.removeAttribute("aria-describedby"));
+	}
+
+	function withTip(el, html) {
+		el.addEventListener("pointerenter", (e) => {
+			if (e.pointerType === "touch") return;
+			clearTimeout(tipTimer);
+			tipTimer = setTimeout(() => showTip(el, html()), 250);
+		});
+		el.addEventListener("pointerleave", hideTip);
+		el.addEventListener("focus", () => el.matches(":focus-visible") && showTip(el, html()));
+		el.addEventListener("blur", hideTip);
+		el.addEventListener("click", hideTip);
+	}
+	addEventListener("scroll", hideTip, { passive: true });
+	addEventListener("keydown", (e) => e.key === "Escape" && hideTip());
 
 	/* ---------- Liste complète ---------- */
 	let all = [];
@@ -518,8 +684,8 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 	(async () => {
 		if (!USER || USER === "VOTRE-COMPTE") {
 			renderProfile(null);
-			$("#screen").innerHTML = `<h2>Réglage nécessaire</h2><p>Indiquez votre identifiant GitHub dans CONFIG.user, en haut du fichier index.html.</p>`;
 			buildDeck([]);
+			$("#screen").innerHTML = `<h2>Réglage nécessaire</h2><p>Indiquez votre identifiant GitHub dans CONFIG.user, en haut du fichier index.html.</p>`;
 			lightUp();
 			return;
 		}
