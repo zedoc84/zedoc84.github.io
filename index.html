@@ -57,22 +57,6 @@ const CONFIG = {
 		// { label: "Projet santé", icon: "🩺", text: "" },
 	],
 
-	// Organisations (ou ensembles) de projets privés : chacune a sa propre page sur le deck,
-	// comme un dossier du Stream Deck. Mêmes champs que « private » pour chaque projet.
-	// text : phrase affichée sur l'écran du deck quand on arrive sur la page (facultatif)
-	// url : page publique de l'organisation (facultatif ; vide = pas de lien)
-	// Une organisation sans projet listé n'a pas de page.
-	groups: [
-		{
-			name: "Medilase",
-			text: "",
-			url: "",
-			projects: [
-				// { label: "Nom du projet", icon: "🩺", text: "Une phrase au survol." },
-			]
-		}
-	],
-
 	// Dépôts à ne jamais afficher (le dépôt de ce site et celui du README de profil le sont déjà)
 	hidden: [],
 
@@ -442,16 +426,11 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 	}
 
 	/* ---------- Deck : pages, touches, écran ---------- */
-	const clean = (list) => (list ?? []).filter((p) => p && p.label);
-	// Pages privées : d'abord les projets privés personnels, puis une page par organisation
-	const LOCKED = [
-		{ title: "Projets privés", text: "", url: "", group: "", items: clean(CONFIG.private) },
-		...(CONFIG.groups ?? []).map((g) => ({ title: g.name || "Projets privés", text: g.text || "", url: g.url || "", group: g.name || "", items: clean(g.projects) }))
-	].filter((pg) => pg.items.length);
-	const MULTI = LOCKED.length > 0;
+	const PRIVATE = (CONFIG.private ?? []).filter((p) => p && p.label);
+	const MULTI = PRIVATE.length > 0;
 	const SLOTS = MULTI ? KEYS - 2 : KEYS - 1;   // touches de contenu par page (le reste sert à naviguer)
 	const LOCK_SVG = `<svg class="lock" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 10V7a5 5 0 0 1 10 0v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1Zm2 0h6V7a3 3 0 0 0-6 0v3Z"/></svg>`;
-	let pages = [];      // pages[n] = { title, items, locked, text, url }
+	let pages = [];      // pages[n] = éléments affichés sur la page n
 	let page = 0;
 	let selected = null; // élément public affiché sur l'écran
 
@@ -471,14 +450,12 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 			if (used.has(r.name.toLowerCase()) || r.fork || r.archived) continue;
 			pub.push({ repo: r, label: pretty(r.name) });
 		}
-		pages = [{ title: "Projets publics", items: pub.slice(0, SLOTS), locked: false }];
-		for (const pg of LOCKED) {
-			for (let i = 0; i < pg.items.length; i += SLOTS) {
-				pages.push({ ...pg, locked: true, items: pg.items.slice(i, i + SLOTS).map((p) => ({ ...p, locked: true, group: pg.group })) });
-			}
+		pages = [pub.slice(0, SLOTS)];
+		for (let i = 0; i < PRIVATE.length; i += SLOTS) {
+			pages.push(PRIVATE.slice(i, i + SLOTS).map((p) => ({ ...p, locked: true })));
 		}
 		page = 0;
-		selected = pages[0].items[0] ?? null;
+		selected = pages[0][0] ?? null;
 		renderPage();
 		renderScreen();
 	}
@@ -494,7 +471,7 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 
 	function renderPage(focusNav = false) {
 		hideTip();
-		const items = pages[page]?.items ?? [];
+		const items = pages[page] ?? [];
 		const allSlot = MULTI ? KEYS - 2 : KEYS - 1;
 		const keys = $("#keys");
 		keys.replaceChildren();
@@ -506,7 +483,8 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 			if (MULTI && i === KEYS - 1) {
 				// Touche « page suivante », comme sur un vrai Stream Deck
 				const next = (page + 1) % pages.length;
-				const label = next === 0 ? "Première page" : pages[next].title;
+				const goesPrivate = !items[0]?.locked && pages[next][0]?.locked;
+				const label = next === 0 ? "Première page" : goesPrivate ? "Projets privés" : "Page suivante";
 				b.dataset.nav = "";
 				b.setAttribute("aria-label", `${label} (page ${page + 1} sur ${pages.length})`);
 				b.innerHTML = `<span class="lcd"><span class="mono">${page + 1}/${pages.length}</span></span><span class="name">${label}</span>`;
@@ -528,11 +506,11 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 				if (it.locked) {
 					b.dataset.locked = "";
 					b.setAttribute("aria-disabled", "true");
-					b.setAttribute("aria-label", `${it.label} (projet privé${it.group ? ` de ${it.group}` : ""})`);
+					b.setAttribute("aria-label", `${it.label} (projet privé)`);
 					b.insertAdjacentHTML("beforeend", LOCK_SVG);
 					// Sans souris (écran tactile), un appui affiche la courte fiche sur l'écran du deck
 					b.addEventListener("click", () => renderScreen(it));
-					withTip(b, () => `<strong>${esc(it.label)}</strong>${it.text ? `<p>${esc(it.text)}</p>` : ""}<div class="tmeta"><span>${esc(lockedNote(it))}</span></div>`);
+					withTip(b, () => `<strong>${esc(it.label)}</strong>${it.text ? `<p>${esc(it.text)}</p>` : ""}<div class="tmeta"><span>Dépôt privé, non consultable</span></div>`);
 				} else {
 					b.setAttribute("aria-pressed", String(it === selected));
 					b.addEventListener("click", () => {
@@ -553,16 +531,14 @@ footer { padding: 28px 0 48px; font-size: 14px; color: var(--ink-soft); border-t
 		if (focusNav) keys.lastElementChild.focus();
 	}
 
-	const lockedNote = (it) => `Dépôt privé${it.group ? ` de ${it.group}` : ""}, non consultable`;
-
 	function renderScreen(lockedItem = null) {
 		const screen = $("#screen");
-		const pg = pages[page];
-		if (lockedItem || pg?.locked) {
+		const items = pages[page] ?? [];
+		if (lockedItem || items[0]?.locked) {
 			const it = lockedItem;
 			screen.innerHTML = it
-				? `<h2>${esc(it.label)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ""}<ul class="meta"><li>${esc(lockedNote(it))}</li></ul>`
-				: `<h2>${esc(pg.title)}</h2><p>${esc(pg.text || "Ces projets ne sont pas publics : leur code n'est pas consultable.")}</p>${pg.url ? `<div class="actions"><a class="btn ghost" href="${esc(pg.url)}">Voir ${esc(pg.group || "l'organisation")} sur GitHub</a></div>` : ""}`;
+				? `<h2>${esc(it.label)}</h2>${it.text ? `<p>${esc(it.text)}</p>` : ""}<ul class="meta"><li>Dépôt privé, non consultable</li></ul>`
+				: `<h2>Projets privés</h2><p>Ces projets ne sont pas publics : leur code n'est pas consultable.</p>`;
 			return;
 		}
 		const it = selected;
