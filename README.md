@@ -1,15 +1,9 @@
-<!--
-  README de profil GitHub.
-  À placer dans un dépôt public nommé exactement comme votre identifiant (ex. VOTRE-COMPTE/VOTRE-COMPTE),
-  sous le nom README.md. Il s'affiche en haut de https://github.com/VOTRE-COMPTE
-  Remplacez VOTRE-COMPTE et écrivez la présentation avec vos propres mots.
--->
 
-### Bonjour, je suis Paul
+### Bonjour,
 
-<!-- Une ou deux phrases sur vous et ce que vous construisez. -->
+Voici la page des projets publics d'un médecin geek 
 
-**Tous mes projets en un coup d'œil : [VOTRE-COMPTE.github.io](https://VOTRE-COMPTE.github.io)**
+**Tous mes projets en un coup d'œil : [VOTRE-COMPTE.github.io](https://zedoc84.github.io)**
 
 #### En ce moment
 
